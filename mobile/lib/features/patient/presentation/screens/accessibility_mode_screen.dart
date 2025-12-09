@@ -40,7 +40,8 @@ class _AccessibilityModeScreenState extends State<AccessibilityModeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AuraAppBar(
-        title: Text("Blind Assist Mode", style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.yellow)),
+        title: "Blind Assist Mode",
+        titleStyle: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.yellow),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.yellow),
       ),
