@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  NURSE
+  ADMIN
+  FAMILY
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(PATIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  patient   Patient?
+  relations UserPatientRelation[]
+}
+
+model Patient {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  mrn       String   @unique
+  dob       DateTime
+  gender    String
+  bed       String?
+  ward      String?
+  riskScore Float?   @default(0)
+  diagnosis String?
+  vitals    Vitals[]
+  snapshots DigitalTwinSnapshot[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  prescriptions Prescription[]
+  alerts        Alert[]
+  relations     UserPatientRelation[]
+}
+
+model Vitals {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  type      String
+  value     Float
+  unit      String
+  timestamp DateTime @default(now())
+}
+
+model DigitalTwinSnapshot {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+model MapNode {
+  id          Int       @id @default(autoincrement())
+  label       String?   // e.g. "Room 204", "Elevator A"
+  x           Float
+  y           Float
+  floor       Int       @default(1)
+  isAccessible Boolean  @default(true) // For wheelchair routing
+  type        String    @default("corridor") // room, corridor, elevator, stairs
+  edgesFrom   MapEdge[] @relation("FromNode")
+  edgesTo     MapEdge[] @relation("ToNode")
+}
+
+model MapEdge {
+  id        Int      @id @default(autoincrement())
+  fromId    Int
+  toId      Int
+  weight    Int
+  from      MapNode  @relation("FromNode", fields: [fromId], references: [id])
+  to        MapNode  @relation("ToNode", fields: [toId], references: [id])
+  isAccessible Boolean @default(true)
+
+  @@unique([fromId, toId])
+}
+
+// EXPANSION PHASE MODELS
+
+model Medication {
+  id            Int             @id @default(autoincrement())
+  name          String
+  description   String?
+  sideEffects   String?
+  interactions  String? // JSON string or simple text for Interaction Checking
+  prescriptions Prescription[]
+  createdAt     DateTime        @default(now())
+}
+
+model Prescription {
+  id           Int        @id @default(autoincrement())
+  patientId    Int
+  medicationId Int
+  dosage       String
+  frequency    String
+  startDate    DateTime
+  endDate      DateTime?
+  active       Boolean    @default(true)
+  
+  patient      Patient    @relation(fields: [patientId], references: [id])
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  createdAt    DateTime   @default(now())
+}
+
+model UserPatientRelation {
+  id        Int      @id @default(autoincrement())
+  userId    Int      // User with role FAMILY
+  patientId Int
+  relation  String   // e.g. "Son", "Wife"
+  
+  user      User     @relation(fields: [userId], references: [id])
+  patient   Patient  @relation(fields: [patientId], references: [id])
+
+  @@unique([userId, patientId])
+}
+
+model Alert {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  type      String   // "CRITICAL_VITALS", "FALL_DETECTED", "MEDICATION_SKIPPED"
+  message   String
+  severity  String   // "HIGH", "MEDIUM", "LOW"
+  resolved  Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  patient   Patient  @relation(fields: [patientId], references: [id])
+}

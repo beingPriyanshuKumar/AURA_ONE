@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: aura_one_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-aura_one}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - aura_one_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: aura_one_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - aura_one_net
+
+  timescale:
+    image: timescale/timescaledb:latest-pg15
+    container_name: aura_one_timescale
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${TS_USER:-postgres}
+      POSTGRES_PASSWORD: ${TS_PASSWORD:-postgres}
+      POSTGRES_DB: ${TS_DB:-aura_one_timeseries}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    networks:
+      - aura_one_net
+
+volumes:
+  postgres_data:
+  timescale_data:
+
+networks:
+  aura_one_net:
+    driver: bridge
