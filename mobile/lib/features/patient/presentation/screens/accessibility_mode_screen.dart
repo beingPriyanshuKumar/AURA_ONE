@@ -3,7 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/a_fab.dart';
+import '../../../../core/widgets/aura_app_bar.dart';
+import '../../../../core/widgets/aura_fab.dart';
 
 class AccessibilityModeScreen extends StatefulWidget {
   const AccessibilityModeScreen({super.key});
@@ -38,8 +39,9 @@ class _AccessibilityModeScreenState extends State<AccessibilityModeScreen> {
     // High Contrast Theme Override
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text("Blind Assist Mode", style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.yellow)),
+      appBar: AuraAppBar(
+        title: "Blind Assist Mode",
+        titleStyle: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.yellow),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.yellow),
       ),

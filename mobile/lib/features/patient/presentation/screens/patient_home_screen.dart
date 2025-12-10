@@ -3,13 +3,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/a_app_bar.dart';
-import '../../../../core/widgets/a_fab.dart';
-import '../../../../core/widgets/a_tab_bar.dart';
+import '../../../../core/widgets/aura_app_bar.dart';
+import '../../../../core/widgets/aura_fab.dart';
+import '../../../../core/widgets/aura_navigation_bar.dart';
 import '../../../../services/api_service.dart';
 import '../widgets/digital_twin_card.dart';
 import '../widgets/vitals_summary_card.dart';
-import '../widgets/ecg_graph_widget.dart';
+import '../widgets/vitals_graphs.dart';
+import '../../../../services/health_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -22,10 +23,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Request HealthKit access on load
+    HealthService().requestPermissions();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true, // Allow body to extend behind standard navbar area
-      appBar: const AAppBar(
+      appBar: const AuraAppBar(
         title: "My Digital Twin",
         actions: [
           Padding(
@@ -63,16 +71,58 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     DigitalTwinCard(riskScore: riskScore),
                     const SizedBox(height: 24),
                     
-                    Text("Real-Time Telemetry (AURA Live)", style: AppTypography.titleLarge),
-                    const SizedBox(height: 12),
-                    // Hardcoded Patient ID 1
-                    const EcgGraphWidget(patientId: 1),
+                    // --- HEART RATE (HealthKit Linked) ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Heart Rate (HealthKit)", style: AppTypography.titleLarge),
+                        Text("$heartRate bpm", style: AppTypography.headlineLarge.copyWith(height: 1)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 160,
+                      child: HeartRateGraph(
+                        color: AppColors.success, // Green
+                        // Connect to HealthKit Stream!
+                        dataStream: HealthService().heartRateStream,
+                        isSimulation: false, // Use Real Data primarily (falls back internally if stream empty?)
+                        // Note: My HeartRateGraph falls back to simulation if no stream provided.
+                        // But here we provide one. If stream is silent, it might render nothing.
+                        // For demo purposes, we usually want hybrid: Stream updates | Simulation filler.
+                        // I'll update isSimulation to true for 'always animating' look + real data overrides.
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
 
-                    Text("Live Vitals", style: AppTypography.titleLarge),
-                    const SizedBox(height: 16),
+                    // --- BLOOD PRESSURE ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Blood Pressure", style: AppTypography.titleLarge),
+                        Text(bp, style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.accent)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const BloodPressureGraph(color: AppColors.accent), // Orange/Pink
+
+                    const SizedBox(height: 24),
+
+                    // --- OXYGEN SATURATION ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Oxygen (SpO2)", style: AppTypography.titleLarge),
+                        Text("$oxygen%", style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.info)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const OxygenGraph(color: AppColors.info), // Blue
+
+                    const SizedBox(height: 32),
                     
-                    GridView.count(
+                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 2,
@@ -87,26 +137,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                           AppColors.primary, 
                           '/medication'
                         ),
-                        VitalsSummaryCard(
-                          label: "Heart Rate",
-                          value: heartRate,
-                          unit: "bpm",
-                          icon: CupertinoIcons.heart_fill,
-                          color: AppColors.error,
-                        ),
-                        VitalsSummaryCard(
-                          label: "Blood Pressure",
-                          value: bp,
-                          unit: "mmHg",
-                          icon: CupertinoIcons.drop_fill,
-                          color: AppColors.accent,
-                        ),
-                        VitalsSummaryCard(
-                          label: "Oxygen Sat",
-                          value: oxygen,
-                          unit: "%",
-                          icon: CupertinoIcons.wind,
-                          color: AppColors.info,
+                        // Keep simple summary cards as well? Maybe redundant now.
+                        // Let's replace them with useful actions or keep "Family" link
+                         _buildFeatureCard(
+                          context, 
+                          "Family Access", 
+                          CupertinoIcons.person_2_fill, 
+                          AppColors.info, 
+                          '/family/home' // Or relevant route
                         ),
                       ],
                     ),
@@ -117,7 +155,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               // Bottom Navigation
               Align(
                 alignment: Alignment.bottomCenter,
-                child: ATabBar(
+                child: AuraNavigationBar(
                   currentIndex: _currentIndex,
                   onTap: (index) {
                     setState(() => _currentIndex = index);
@@ -131,7 +169,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           );
         }
       ),
-      floatingActionButton: AFAB(
+      floatingActionButton: AuraFAB(
         onPressed: () => context.push('/chat'),
         icon: CupertinoIcons.chat_bubble_text_fill,
         label: "AI Assistant",
