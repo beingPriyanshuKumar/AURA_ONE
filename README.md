@@ -27,9 +27,15 @@ The system consists of three connected applications:
       - **Digital Twin**: 3D-style health visualization.
 
 3.  **`health_data/` (Hardware Simulator)**
+
     - **Tech**: Flutter (Android).
     - **Role**: Simulates a medical vitals monitor.
     - **Features**: Generates realistic ECG (PQRST), SpO2 waveforms, and vital sign numbers; streams to server via WebSockets.
+
+4.  **`web/frontend/` (Web Portal)**
+    - **Tech**: React, Vite.
+    - **Role**: Administrative / Hospital Staff Dashboard (In Development).
+    - **Features**: Web-based access to patient data and hospital management tools.
 
 ---
 
@@ -82,6 +88,16 @@ flutter run
 ```
 
 - **Usage**: Log in -> View the "My Digital Twin" dashboard. The graphs will animate in sync with the simulator!
+
+### 5. Web Portal
+
+Run the web dashboard.
+
+```bash
+cd web/frontend/AURA_ONE_web
+npm install
+npm run dev
+```
 
 ---
 
