@@ -39,7 +39,10 @@ export class EventsGateway implements OnModuleInit {
     @ConnectedSocket() client: Socket,
   ) {
     console.log(`Client ${client.id} subscribed to patient ${data.patientId}`);
-    this.startStreaming(client.id, data.patientId);
+    client.join(`patient_${data.patientId}`); // Join Room
+    // this.startStreaming(client.id, data.patientId); 
+    // FIXED: Disable internal simulation to prevent conflict with 'health_data' app.
+    // The dashboard will now wait for 'simulate_vitals' events from the external app. 
     return { event: 'subscribed', data: data.patientId };
   }
 
@@ -47,6 +50,26 @@ export class EventsGateway implements OnModuleInit {
   handleUnsubscribePatient(@ConnectedSocket() client: Socket) {
     this.stopStreaming(client.id);
     return { event: 'unsubscribed' };
+  }
+
+  @SubscribeMessage('simulate_vitals')
+  handleSimulation(@MessageBody() data: any) {
+    // Relay external simulation data to the specific patient room
+    // Assuming data contains { patientId, ... }
+    if (data && data.patientId) {
+       // Stop internal simulation if external data arrives?
+       // For now, let's just broadcast. 
+       // In a real app, we'd toggle a "Live Mode" flag.
+       // We broadcast to the specific client(s) watching this patient.
+       // Since we don't have rooms set up explicitly, we'll iterate or use a room if we had one.
+       // My logic below uses `this.server.to(clientId)`. I need to map patientId -> clientIds.
+       
+       // BUT, the existing logic `startStreaming` sends to `clientId`.
+       // I should probably Broadcast to a Room named `patient_${data.patientId}`.
+       // And `handleSubscribePatient` should Join that room.
+       
+       this.server.to(`patient_${data.patientId}`).emit('vitals.update', data);
+    }
   }
 
   private startStreaming(clientId: string, patientId: number) {

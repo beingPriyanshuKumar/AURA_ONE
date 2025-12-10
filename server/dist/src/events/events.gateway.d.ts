@@ -15,6 +15,7 @@ export declare class EventsGateway implements OnModuleInit {
     handleUnsubscribePatient(client: Socket): {
         event: string;
     };
+    handleSimulation(data: any): void;
     private startStreaming;
     private stopStreaming;
     private simulateECG;

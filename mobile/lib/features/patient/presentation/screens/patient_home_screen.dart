@@ -10,7 +10,9 @@ import '../../../../services/api_service.dart';
 import '../widgets/digital_twin_card.dart';
 import '../widgets/vitals_summary_card.dart';
 import '../widgets/vitals_graphs.dart';
+import '../widgets/vitals_card.dart';
 import '../../../../services/health_service.dart';
+import '../../../../services/socket_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -26,7 +28,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   void initState() {
     super.initState();
     // Request HealthKit access on load
+    // Request HealthKit access on load
     HealthService().requestPermissions();
+    // Subscribe to Real-time Vitals Room (Patient 1)
+    SocketService().subscribePatient(1);
   }
 
   @override
@@ -71,54 +76,70 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     DigitalTwinCard(riskScore: riskScore),
                     const SizedBox(height: 24),
                     
-                    // --- HEART RATE (HealthKit Linked) ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Heart Rate (HealthKit)", style: AppTypography.titleLarge),
-                        Text("$heartRate bpm", style: AppTypography.headlineLarge.copyWith(height: 1)),
-                      ],
+                    // --- HEART RATE ---
+                    StreamBuilder<int>(
+                      stream: SocketService().vitalsStream.map((d) => d['hr'] as int? ?? 0).distinct(),
+                      builder: (context, snap) {
+                         final val = (snap.data != null && snap.data! > 0) ? snap.data.toString() : heartRate;
+                         return VitalsCard(
+                           title: "Heart Rate",
+                           value: val,
+                           unit: "bpm",
+                           icon: CupertinoIcons.heart_fill,
+                           color: AppColors.success,
+                           graph: SizedBox(
+                             height: 150,
+                             child: HeartRateGraph(
+                               color: AppColors.success,
+                               bpmStream: HealthService().heartRateStream,
+                               waveStream: SocketService().vitalsStream.map((d) => (d['ecg'] as num?)?.toDouble() ?? 0.0),
+                             ),
+                           ),
+                         );
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 160,
-                      child: HeartRateGraph(
-                        color: AppColors.success, // Green
-                        // Connect to HealthKit Stream!
-                        dataStream: HealthService().heartRateStream,
-                        isSimulation: false, // Use Real Data primarily (falls back internally if stream empty?)
-                        // Note: My HeartRateGraph falls back to simulation if no stream provided.
-                        // But here we provide one. If stream is silent, it might render nothing.
-                        // For demo purposes, we usually want hybrid: Stream updates | Simulation filler.
-                        // I'll update isSimulation to true for 'always animating' look + real data overrides.
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
 
                     // --- BLOOD PRESSURE ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Blood Pressure", style: AppTypography.titleLarge),
-                        Text(bp, style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.accent)),
-                      ],
+                    StreamBuilder<Map>(
+                      stream: SocketService().vitalsStream.map((d) => d['bp'] as Map? ?? {}),
+                      builder: (context, snap) {
+                         final bpMap = snap.data ?? {};
+                         final val = (bpMap.isNotEmpty) ? "${bpMap['sys']}/${bpMap['dia']}" : bp;
+                         return VitalsCard(
+                           title: "Blood Pressure",
+                           value: val,
+                           unit: "mmHg",
+                           icon: CupertinoIcons.waveform_path_ecg,
+                           color: AppColors.accent,
+                           graph: const SizedBox(
+                             height: 150,
+                             child: BloodPressureGraph(color: AppColors.accent),
+                           ),
+                         );
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    const BloodPressureGraph(color: AppColors.accent), // Orange/Pink
-
-                    const SizedBox(height: 24),
 
                     // --- OXYGEN SATURATION ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Oxygen (SpO2)", style: AppTypography.titleLarge),
-                        Text("$oxygen%", style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.info)),
-                      ],
+                    StreamBuilder<int>(
+                      stream: SocketService().vitalsStream.map((d) => (d['spo2'] as num?)?.toInt() ?? 0).distinct(),
+                      builder: (context, snap) {
+                         final val = (snap.data != null && snap.data! > 0) ? snap.data.toString() : oxygen;
+                         return VitalsCard(
+                           title: "Oxygen Saturation",
+                           value: val,
+                           unit: "%",
+                           icon: CupertinoIcons.drop_fill,
+                           color: AppColors.info,
+                           graph: SizedBox(
+                             height: 150,
+                             child: OxygenGraph(
+                               color: AppColors.info,
+                               waveStream: SocketService().vitalsStream.map((d) => (d['spo2_wave'] as num?)?.toDouble() ?? 0.0),
+                             ),
+                           ),
+                         );
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    const OxygenGraph(color: AppColors.info), // Blue
 
                     const SizedBox(height: 32),
                     
@@ -171,8 +192,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       ),
       floatingActionButton: AuraFAB(
         onPressed: () => context.push('/chat'),
-        icon: CupertinoIcons.chat_bubble_text_fill,
-        label: "AI Assistant",
+        icon: CupertinoIcons.chat_bubble_2_fill, // More modern bubble
+        // label: "AI Assistant", // Removed to fit in dock
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );

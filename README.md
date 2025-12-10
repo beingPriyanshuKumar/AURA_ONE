@@ -1,56 +1,92 @@
 # AURA ONE
 
-A Unified AI Operating System for Hospitals.
+**A Unified AI Operating System for Hospitals.**
 
-## Project Structure
+AURA ONE is a next-generation hospital management platform that combines a **Patient Digital Twin**, **Real-time Vitals Monitoring**, **Indoor Navigation**, and **AI Assistance** into a seamless ecosystem.
 
-- `backend/`: NestJS application (API, AI Gateway, Digital Twin)
-- `mobile/`: Flutter application (Android/iOS)
-- `docker-compose.yml`: Database infrastructure (PostgreSQL, Redis, TimescaleDB)
+---
 
-## Prerequisites
+## 🏗️ Project Architecture
 
-- Node.js (v18+) & NPM
+The system consists of three connected applications:
+
+1.  **`server/` (Backend)**
+
+    - **Tech**: NestJS, Prisma, PostgreSQL, Socket.IO.
+    - **Role**: Central API, AI Gateway, WebSocket Hub (Relays simulated data to dashboard).
+    - **Features**: Authentication, Patient Management, Map Pathfinding, Data Relay.
+
+2.  **`mobile/` (Patient Dashboard)**
+
+    - **Tech**: Flutter (iOS/Android).
+    - **Role**: The primary interface for patients and doctors.
+    - **Features**:
+      - **Dynamic Dashboard**: Real-time Vitals Cards (ECG, SpO2, BP).
+      - **Indoor Navigation**: A\* Pathfinding on hospital maps.
+      - **AI Assistant**: Voice/Text chat for medical queries.
+      - **Digital Twin**: 3D-style health visualization.
+
+3.  **`health_data/` (Hardware Simulator)**
+    - **Tech**: Flutter (Android).
+    - **Role**: Simulates a medical vitals monitor.
+    - **Features**: Generates realistic ECG (PQRST), SpO2 waveforms, and vital sign numbers; streams to server via WebSockets.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js (v18+)
 - Flutter SDK (v3.16+)
-- Docker & Docker Compose
+- Docker & Docker Compose (for DB)
 
-## Setup Instructions
+### 1. Database Infrastructure
 
-### 1. Fix Permissions (Important)
-
-If you encounter `EACCES` errors with npm, run:
+Start the PostgreSQL database:
 
 ```bash
-sudo chown -R $(whoami) ~/.npm
-```
-
-### 2. Backend Setup
-
-```bash
-cd backend
-npm install
-# If you have conflicts:
-npm install --legacy-peer-deps
-```
-
-### 3. Database Setup
-
-```bash
-# In the root directory (AURA_ONE)
 docker-compose up -d
 ```
 
-### 4. Running the Backend
+### 2. Backend Server
+
+The server coordinates everything.
 
 ```bash
-cd backend
-npm run start:dev
+cd server
+npm install
+npm run start
 ```
 
-### 5. Mobile App Setup
+- _Note_: The server IP (e.g., `172.20.10.3`) is needed for the apps to connect.
+
+### 3. Health Data Simulator (The "Medical Monitor")
+
+Run this on a separate device (Android recommended) to act as the source of truth.
+
+```bash
+cd health_data
+flutter run
+```
+
+- **Usage**: Go to Settings -> Enter Server IP -> Connect -> Start Monitoring.
+
+### 4. Patient Dashboard (The "Receiver")
+
+Run this to visualize the data.
 
 ```bash
 cd mobile
-flutter pub get
 flutter run
 ```
+
+- **Usage**: Log in -> View the "My Digital Twin" dashboard. The graphs will animate in sync with the simulator!
+
+---
+
+## ✨ Key Features
+
+- **Real-time Vitals Sync**: Sub-second latency streaming of waveforms from Simulator -> Server -> Dashboard.
+- **Premium UI**: Glassmorphism aesthetic, "Outfit" typography, and animated Vitals Cards.
+- **Smart Navigation**: Percentage-based coordinate mapping for accurate indoor wayfinding.

@@ -26,7 +26,7 @@ class AuraNavigationBar extends StatelessWidget {
             children: [
               _buildTab(0, CupertinoIcons.house_fill, "Home"),
               _buildTab(1, CupertinoIcons.heart_fill, "Vitals"),
-              const SizedBox(width: 48), // Space for FAB
+              const SizedBox(width: 64), // Space for FAB (Standard 56 + buffer)
               _buildTab(2, CupertinoIcons.map_fill, "Map"),
               _buildTab(3, CupertinoIcons.person_fill, "Profile"),
             ],

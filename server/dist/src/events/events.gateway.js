@@ -31,12 +31,17 @@ let EventsGateway = class EventsGateway {
     }
     handleSubscribePatient(data, client) {
         console.log(`Client ${client.id} subscribed to patient ${data.patientId}`);
-        this.startStreaming(client.id, data.patientId);
+        client.join(`patient_${data.patientId}`);
         return { event: 'subscribed', data: data.patientId };
     }
     handleUnsubscribePatient(client) {
         this.stopStreaming(client.id);
         return { event: 'unsubscribed' };
+    }
+    handleSimulation(data) {
+        if (data && data.patientId) {
+            this.server.to(`patient_${data.patientId}`).emit('vitals.update', data);
+        }
     }
     startStreaming(clientId, patientId) {
         if (this.activeSessions.has(clientId)) {
@@ -100,6 +105,13 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket]),
     __metadata("design:returntype", void 0)
 ], EventsGateway.prototype, "handleUnsubscribePatient", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('simulate_vitals'),
+    __param(0, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], EventsGateway.prototype, "handleSimulation", null);
 exports.EventsGateway = EventsGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
