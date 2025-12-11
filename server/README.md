@@ -27,7 +27,7 @@ npm run start
 
 - **Listen**: `vitals.update`
 
-  - **Payload**: `{ patientId: number, heart_rate: number, spo2: number, blood_pressure: string }`
+  - **Payload**: `{ email?: string, patientId?: number, heart_rate: number, spo2: number, blood_pressure: string }`
   - **Action**: Broadcasts data to room `patient_{id}` and saves snapshot to DB.
 
 - **Listen**: `join_room`

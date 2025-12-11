@@ -79,7 +79,11 @@ cd health_data
 flutter run
 ```
 
-- **Usage**: Go to Settings -> Enter Server IP (e.g., `http://10.0.2.2:3001`) -> Connect -> Start Monitoring.
+- **Usage**:
+  1. Go to **Settings** (Gear icon).
+  2. Enter **Server IP** (e.g., `http://10.0.2.2:3001` or your LAN IP).
+  3. Enter **Patient Email** (to target a specific user).
+  4. Tap **Save & Connect** -> **Start Monitoring**.
 
 ### 4. Patient Dashboard (The "Receiver")
 
