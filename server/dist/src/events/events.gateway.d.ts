@@ -1,22 +1,29 @@
+import { OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { OnModuleInit } from '@nestjs/common';
-export declare class EventsGateway implements OnModuleInit {
+import { PrismaService } from '../prisma/prisma.service';
+export declare class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+    private prisma;
     server: Server;
-    private activeSessions;
-    onModuleInit(): void;
-    handleConnection(client: Socket): void;
+    private lastUpdate;
+    constructor(prisma: PrismaService);
+    afterInit(server: Server): void;
+    handleConnection(client: Socket, ...args: any[]): void;
     handleDisconnect(client: Socket): void;
-    handleSubscribePatient(data: {
+    handleSubscribePatient(client: Socket, data: {
         patientId: number;
-    }, client: Socket): {
+    }): {
         event: string;
-        data: number;
+        data: {
+            room: string;
+        };
     };
-    handleUnsubscribePatient(client: Socket): {
+    handleUnsubscribePatient(client: Socket, data: {
+        patientId: number;
+    }): {
         event: string;
+        data: {
+            room: string;
+        };
     };
-    handleSimulation(data: any): void;
-    private startStreaming;
-    private stopStreaming;
-    private simulateECG;
+    handleSimulateVitals(client: Socket, data: any): Promise<void>;
 }

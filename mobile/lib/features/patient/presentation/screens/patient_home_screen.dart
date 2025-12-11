@@ -7,12 +7,6 @@ import '../../../../core/widgets/aura_app_bar.dart';
 import '../../../../core/widgets/aura_fab.dart';
 import '../../../../core/widgets/aura_navigation_bar.dart';
 import '../../../../services/api_service.dart';
-import '../widgets/digital_twin_card.dart';
-import '../widgets/vitals_summary_card.dart';
-import '../widgets/vitals_graphs.dart';
-import '../widgets/vitals_card.dart';
-import '../../../../services/health_service.dart';
-import '../../../../services/socket_service.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -25,21 +19,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   int _currentIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    // Request HealthKit access on load
-    // Request HealthKit access on load
-    HealthService().requestPermissions();
-    // Subscribe to Real-time Vitals Room (Patient 1)
-    SocketService().subscribePatient(1);
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Allow body to extend behind standard navbar area
+      extendBody: true,
       appBar: const AuraAppBar(
-        title: "My Digital Twin",
+        title: "My Health Hub",
         actions: [
           Padding(
             padding: EdgeInsets.only(right: 16.0),
@@ -48,128 +32,189 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
-        // Hardcoded ID 1 for verified user for now
-        future: ApiService().getPatientTwin(1),
+        future: ApiService().getPatientTwin(1), // Hardcoded ID 1 for patient view
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
              return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-             return Center(child: Text("Error: ${snapshot.error}", style: AppTypography.bodyMedium.copyWith(color: AppColors.error)));
-          }
-
-          final data = snapshot.data!;
-          // Default to sane values if null
-          final riskScore = (data['risk_score'] ?? 0).toDouble(); 
-          final heartRate = data['heart_rate']?.toString() ?? "--";
-          final bp = data['blood_pressure']?.toString() ?? "--/--";
-          final oxygen = data['oxygen_saturation']?.toString() ?? "--";
+          
+          final data = snapshot.data ?? {};
+          final status = "Admitted"; // Mock status for demo
+          final room = "Room 302 - General Ward";
+          final medsTaken = 2; // Mock
+          final medsTotal = 4;
 
           return Stack(
             children: [
-              // Scrollable Content
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 100, 20, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DigitalTwinCard(riskScore: riskScore),
-                    const SizedBox(height: 24),
-                    
-                    // --- HEART RATE ---
-                    StreamBuilder<int>(
-                      stream: SocketService().vitalsStream.map((d) => d['hr'] as int? ?? 0).distinct(),
-                      builder: (context, snap) {
-                         final val = (snap.data != null && snap.data! > 0) ? snap.data.toString() : heartRate;
-                         return VitalsCard(
-                           title: "Heart Rate",
-                           value: val,
-                           unit: "bpm",
-                           icon: CupertinoIcons.heart_fill,
-                           color: AppColors.success,
-                           graph: SizedBox(
-                             height: 150,
-                             child: HeartRateGraph(
-                               color: AppColors.success,
-                               bpmStream: HealthService().heartRateStream,
-                               waveStream: SocketService().vitalsStream.map((d) => (d['ecg'] as num?)?.toDouble() ?? 0.0),
-                             ),
-                           ),
-                         );
-                      },
-                    ),
-
-                    // --- BLOOD PRESSURE ---
-                    StreamBuilder<Map>(
-                      stream: SocketService().vitalsStream.map((d) => d['bp'] as Map? ?? {}),
-                      builder: (context, snap) {
-                         final bpMap = snap.data ?? {};
-                         final val = (bpMap.isNotEmpty) ? "${bpMap['sys']}/${bpMap['dia']}" : bp;
-                         return VitalsCard(
-                           title: "Blood Pressure",
-                           value: val,
-                           unit: "mmHg",
-                           icon: CupertinoIcons.waveform_path_ecg,
-                           color: AppColors.accent,
-                           graph: const SizedBox(
-                             height: 150,
-                             child: BloodPressureGraph(color: AppColors.accent),
-                           ),
-                         );
-                      },
-                    ),
-
-                    // --- OXYGEN SATURATION ---
-                    StreamBuilder<int>(
-                      stream: SocketService().vitalsStream.map((d) => (d['spo2'] as num?)?.toInt() ?? 0).distinct(),
-                      builder: (context, snap) {
-                         final val = (snap.data != null && snap.data! > 0) ? snap.data.toString() : oxygen;
-                         return VitalsCard(
-                           title: "Oxygen Saturation",
-                           value: val,
-                           unit: "%",
-                           icon: CupertinoIcons.drop_fill,
-                           color: AppColors.info,
-                           graph: SizedBox(
-                             height: 150,
-                             child: OxygenGraph(
-                               color: AppColors.info,
-                               waveStream: SocketService().vitalsStream.map((d) => (d['spo2_wave'] as num?)?.toDouble() ?? 0.0),
-                             ),
-                           ),
-                         );
-                      },
-                    ),
-
-                    const SizedBox(height: 32),
-                    
-                     GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 1.4,
-                      children: [
-                        _buildFeatureCard(
-                          context, 
-                          "Scan Meds", 
-                          CupertinoIcons.barcode_viewfinder, 
-                          AppColors.primary, 
-                          '/medication'
+              RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {}); // Triggers rebuild of FutureBuilder
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 100, 20, 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- 1. HOSPITAL STATUS CARD ---
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary.withOpacity(0.8), AppColors.primaryDark],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                             BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
+                          ]
                         ),
-                        // Keep simple summary cards as well? Maybe redundant now.
-                        // Let's replace them with useful actions or keep "Family" link
-                         _buildFeatureCard(
-                          context, 
-                          "Family Access", 
-                          CupertinoIcons.person_2_fill, 
-                          AppColors.info, 
-                          '/family/home' // Or relevant route
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle
+                              ),
+                              child: const Icon(CupertinoIcons.bed_double_fill, color: Colors.white, size: 32),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Current Status", 
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    status, 
+                                    style: AppTypography.headlineMedium.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    room, 
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- 2. MEDICATION TRACKER ---
+                      Text(
+                        "Today's Medications", 
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("$medsTaken of $medsTotal Taken", style: AppTypography.titleMedium),
+                                Text("${(medsTaken/medsTotal*100).toInt()}%", style: AppTypography.titleMedium.copyWith(color: AppColors.primary)),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: medsTaken / medsTotal,
+                                backgroundColor: AppColors.surfaceHighlight,
+                                valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                                minHeight: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => context.push('/medication'), 
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12)
+                                ),
+                                child: Text("View Schedule", style: AppTypography.titleMedium.copyWith(color: AppColors.primary))
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- 3. STATIC VITALS (SNAPSHOT) ---
+                      Text(
+                        "Latest Vitals Snapshot", 
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildStaticVitalCard("Heart Rate", "${data['current_state']?['heart_rate'] ?? '--'} bpm", CupertinoIcons.heart_fill, AppColors.success)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildStaticVitalCard("Oxygen", "${(data['current_state']?['spo2'] as num?)?.toInt() ?? '--'} %", CupertinoIcons.drop_fill, AppColors.info)),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+
+                      // --- 4. ACTION GRID ---
+                      Text("Quick Actions", style: AppTypography.titleLarge),
+                      const SizedBox(height: 12),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.5,
+                        children: [
+                          _buildActionCard(context, "Report Pain", CupertinoIcons.exclamationmark_bubble_fill, AppColors.error, () => context.push('/patient/pain')),
+                          _buildActionCard(context, "Hospital Map", CupertinoIcons.map_fill, AppColors.accent, () => context.push('/navigation')),
+                          _buildActionCard(context, "My History", CupertinoIcons.time, AppColors.textSecondary, () {}),
+                          _buildActionCard(context, "Family Access", CupertinoIcons.person_2_fill, AppColors.info, () => context.push('/family/home')),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               
@@ -180,9 +225,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   currentIndex: _currentIndex,
                   onTap: (index) {
                     setState(() => _currentIndex = index);
-                    if (index == 2) {
-                      context.push('/navigation');
-                    }
+                    if (index == 2) context.push('/navigation');
                   },
                 ),
               ),
@@ -192,28 +235,65 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       ),
       floatingActionButton: AuraFAB(
         onPressed: () => context.push('/chat'),
-        icon: CupertinoIcons.chat_bubble_2_fill, // More modern bubble
-        // label: "AI Assistant", // Removed to fit in dock
+        icon: CupertinoIcons.chat_bubble_2_fill,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _buildFeatureCard(BuildContext context, String label, IconData icon, Color color, String route) {
+  Widget _buildStaticVitalCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceHighlight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 12),
+          Text(value, style: AppTypography.headlineMedium.copyWith(fontSize: 24)),
+          Text(title, style: AppTypography.bodyMedium),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () => context.push(route),
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.surfaceHighlight),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ]
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(label, style: AppTypography.titleMedium),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title, 
+              style: AppTypography.titleMedium.copyWith(fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

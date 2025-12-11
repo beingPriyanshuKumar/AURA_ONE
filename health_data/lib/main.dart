@@ -41,7 +41,7 @@ class MonitorScreen extends StatefulWidget {
 class _MonitorScreenState extends State<MonitorScreen> {
   final _simulationService = SimulationService();
   final _socketService = SocketService();
-  final _ipController = TextEditingController(text: '192.168.1.X'); // Placeholder
+  final _ipController = TextEditingController(text: '10.0.2.2'); // Android Emulator Host IP
   
   StreamSubscription? _subscription;
   bool _isSimulating = false;
@@ -92,7 +92,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
     setState(() {
       _hr = data['hr'];
       _spo2 = (data['spo2'] as num).toInt();
-      _bp = "${data['bp']['sys']}/${data['bp']['dia']}";
+      _bp = data['bp'] as String;
       
       _xValue += 0.05;
       

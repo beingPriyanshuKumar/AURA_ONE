@@ -10,22 +10,12 @@ export declare class PatientController {
             ward: string;
         };
         current_state: {
-            heart_rate: {
-                value: any;
-                unit: any;
-                time: any;
-            };
-            blood_pressure: {
-                value: any;
-                unit: any;
-                time: any;
-            };
-            spo2: {
-                value: any;
-                unit: any;
-                time: any;
-            };
+            heart_rate: any;
+            blood_pressure: any;
+            spo2: any;
             risk_score: number;
+            pain_level: number;
+            pain_reported_at: Date;
         };
         risk_predictions: {
             hypotension_6h: number;
@@ -37,11 +27,11 @@ export declare class PatientController {
     findAll(): Promise<({
         user: {
             id: number;
-            name: string;
             createdAt: Date;
             updatedAt: Date;
             email: string;
             password: string;
+            name: string;
             role: import(".prisma/client").$Enums.Role;
         };
     } & {
@@ -54,6 +44,9 @@ export declare class PatientController {
         ward: string | null;
         riskScore: number | null;
         diagnosis: string | null;
+        painLevel: number | null;
+        painReportedAt: Date | null;
+        latestVitals: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
     })[]>;
@@ -67,6 +60,25 @@ export declare class PatientController {
         ward: string | null;
         riskScore: number | null;
         diagnosis: string | null;
+        painLevel: number | null;
+        painReportedAt: Date | null;
+        latestVitals: import("@prisma/client/runtime/library").JsonValue | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    reportPain(id: number, level: number): Promise<{
+        id: number;
+        userId: number;
+        mrn: string;
+        dob: Date;
+        gender: string;
+        bed: string | null;
+        ward: string | null;
+        riskScore: number | null;
+        diagnosis: string | null;
+        painLevel: number | null;
+        painReportedAt: Date | null;
+        latestVitals: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
     }>;

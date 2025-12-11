@@ -7,9 +7,9 @@ import 'package:flutter/foundation.dart';
 class ApiService {
   static String get baseUrl {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000';
+      return 'http://10.0.2.2:3001';
     }
-    return 'http://localhost:3000';
+    return 'http://localhost:3001';
   }
   final _storage = const FlutterSecureStorage();
 
@@ -105,6 +105,39 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to process voice command');
+    }
+  }
+  Future<List<dynamic>> getPatientMedications(int patientId) async {
+    final token = await getToken();
+    // ... impl
+    final response = await http.get(
+      Uri.parse('$baseUrl/medication/patient/$patientId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      return [];
+    }
+  }
+
+  Future<void> reportPain(int patientId, int level) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/patients/$patientId/pain'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'level': level}),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to report pain');
     }
   }
 }

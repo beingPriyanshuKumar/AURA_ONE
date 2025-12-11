@@ -299,7 +299,7 @@ class _LineGraphPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.0
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
@@ -329,13 +329,42 @@ class _LineGraphPainter extends CustomPainter {
       }
     }
 
-    // Glow Effect
-    canvas.drawPath(path, Paint()..color = color.withOpacity(0.5)..strokeWidth = 4..style = PaintingStyle.stroke..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    // 1. Draw Gradient Fill
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        color.withOpacity(0.2),
+        color.withOpacity(0.0),
+      ],
+      stops: const [0.0, 0.85],
+    );
+
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..style = PaintingStyle.fill,
+    );
+
+    // 2. Draw Glow Effect (Removed as it caused blurring issues on some devices)
+    // canvas.drawPath(path, Paint()..color = color.withOpacity(0.5)..strokeWidth = 4..style = PaintingStyle.stroke..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    
+    // 3. Draw Main Line
     canvas.drawPath(path, paint);
 
-    // Tip
+    // 4. Draw Tip
     if (points.isNotEmpty) {
        double lastY = midY - (points.last * (size.height / range));
+       
+       // Outer glow ring
+       canvas.drawCircle(Offset(size.width, lastY), 6, Paint()..color = color.withOpacity(0.3));
+       // Inner dot
        canvas.drawCircle(Offset(size.width, lastY), 3, Paint()..color = Colors.white);
     }
   }

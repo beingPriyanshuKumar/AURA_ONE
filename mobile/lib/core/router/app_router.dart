@@ -6,10 +6,12 @@ import '../../features/patient/presentation/screens/patient_home_screen.dart';
 import '../../features/patient/presentation/screens/accessibility_mode_screen.dart';
 import '../../features/navigation/presentation/screens/navigation_map_screen.dart';
 import '../../features/patient/presentation/screens/doctor_dashboard_screen.dart';
+import '../../features/patient/presentation/screens/doctor_patient_screen.dart';
 import '../../features/patient/presentation/screens/medication_screen.dart';
 import '../../features/patient/presentation/screens/family_dashboard_screen.dart';
 import '../../features/ai/presentation/screens/vision_stub_screen.dart';
 import '../../features/ai/presentation/screens/chat_screen.dart';
+import '../../features/patient/presentation/screens/pain_report_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -54,6 +56,10 @@ final appRouter = GoRouter(
       builder: (context, state) => const MedicationScreen(),
     ),
     GoRoute(
+      path: '/patient/pain',
+      builder: (context, state) => const PainReportScreen(),
+    ),
+    GoRoute(
       path: '/chat',
       builder: (context, state) => const ChatScreen(),
     ),
@@ -64,6 +70,13 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/doctor/home',
       builder: (context, state) => const DoctorDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/doctor/monitor/:id',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        return DoctorPatientScreen(patientId: id);
+      },
     ),
     GoRoute(
       path: '/ai/medication',

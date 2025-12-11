@@ -18,7 +18,6 @@ class SocketService {
     // Remove "http://" or "https://" for socket connection if needed, 
     // but socket_io_client usually handles url parsing.
     // Assuming baseUrl is like "http://localhost:3000"
-    
     _socket = IO.io(baseUrl, IO.OptionBuilder()
       .setTransports(['websocket'])
       .disableAutoConnect() 

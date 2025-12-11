@@ -28,13 +28,31 @@ class VitalsCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: AppColors.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.surface,
+            Color(0xFF252525), 
+            AppColors.surface,
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.surfaceHighlight.withOpacity(0.5)),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF000000).withOpacity(0.4),
+            blurRadius: 24, // Softer, larger shadow
+            offset: const Offset(0, 12),
+            spreadRadius: -4,
+          ),
+          // Inner light hint (simulated via outer shadow with negative spread? No, standard Flutter shadow)
+          BoxShadow(
+            color: color.withOpacity(0.1), // Subtle colored glow matching vital type
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: -8,
           ),
         ],
       ),
@@ -64,23 +82,27 @@ class VitalsCard extends StatelessWidget {
           // Value
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  value,
-                  style: AppTypography.headlineLarge.copyWith(
-                    fontSize: 42, 
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    value,
+                    style: AppTypography.headlineLarge.copyWith(
+                      fontSize: 42, 
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold
+                    ),
                   ),
-                ),
-                if (unit != null) ...[
-                  const SizedBox(width: 6),
-                  Text(unit!, style: AppTypography.titleMedium.copyWith(color: AppColors.textSecondary)),
+                  if (unit != null) ...[
+                    const SizedBox(width: 6),
+                    Text(unit!, style: AppTypography.titleMedium.copyWith(color: AppColors.textSecondary)),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
 

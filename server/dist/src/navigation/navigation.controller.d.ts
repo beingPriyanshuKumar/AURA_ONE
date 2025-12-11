@@ -4,46 +4,46 @@ export declare class NavigationController {
     constructor(navigationService: NavigationService);
     findPath(from: string, to: string): Promise<{
         path: {
+            id: number;
+            type: string;
             label: string | null;
             x: number;
             y: number;
             floor: number;
             isAccessible: boolean;
-            type: string;
-            id: number;
         }[];
         distance: number;
     }>;
     getMap(): Promise<{
         nodes: {
+            id: number;
+            type: string;
             label: string | null;
             x: number;
             y: number;
             floor: number;
             isAccessible: boolean;
-            type: string;
-            id: number;
         }[];
         edges: {
-            isAccessible: boolean;
             id: number;
+            isAccessible: boolean;
             weight: number;
             fromId: number;
             toId: number;
         }[];
     }>;
     createNode(data: any): Promise<{
+        id: number;
+        type: string;
         label: string | null;
         x: number;
         y: number;
         floor: number;
         isAccessible: boolean;
-        type: string;
-        id: number;
     }>;
     createEdge(data: any): Promise<{
-        isAccessible: boolean;
         id: number;
+        isAccessible: boolean;
         weight: number;
         fromId: number;
         toId: number;

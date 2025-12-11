@@ -11,8 +11,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   
   final socketUrl = (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) 
-      ? 'http://10.0.2.2:3000' 
-      : 'http://localhost:3000';
+      ? 'http://10.0.2.2:3001' 
+      : 'http://localhost:3001';
       
   SocketService().init(socketUrl);
 

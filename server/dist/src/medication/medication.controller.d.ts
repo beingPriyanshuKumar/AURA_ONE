@@ -4,8 +4,8 @@ export declare class MedicationController {
     constructor(medicationService: MedicationService);
     getAll(): Promise<{
         id: number;
-        name: string;
         createdAt: Date;
+        name: string;
         description: string | null;
         sideEffects: string | null;
         interactions: string | null;
@@ -13,16 +13,16 @@ export declare class MedicationController {
     getPrescriptions(id: number): Promise<({
         medication: {
             id: number;
-            name: string;
             createdAt: Date;
+            name: string;
             description: string | null;
             sideEffects: string | null;
             interactions: string | null;
         };
     } & {
         id: number;
-        patientId: number;
         createdAt: Date;
+        patientId: number;
         medicationId: number;
         dosage: string;
         frequency: string;
@@ -37,8 +37,8 @@ export declare class MedicationController {
     }): Promise<{
         prescription: {
             id: number;
-            patientId: number;
             createdAt: Date;
+            patientId: number;
             medicationId: number;
             dosage: string;
             frequency: string;

@@ -32,6 +32,9 @@ export class PatientService {
       deterioration_prob: riskScore / 100,
     };
 
+    // Use latestVitals snapshot if available, otherwise fall back to Vitals table
+    const lv = patient.latestVitals as any;
+
     return {
       metadata: {
         name: patient.user.name,
@@ -40,10 +43,12 @@ export class PatientService {
         ward: patient.ward,
       },
       current_state: {
-         heart_rate: this.getLatestVital(patient.vitals, 'HR'),
-         blood_pressure: this.getLatestVital(patient.vitals, 'BP'),
-         spo2: this.getLatestVital(patient.vitals, 'SPO2'),
+         heart_rate: lv?.hr ?? this.getLatestVital(patient.vitals, 'HR')?.value,
+         blood_pressure: lv?.bp ?? this.getLatestVital(patient.vitals, 'BP')?.value,
+         spo2: lv?.spo2 ?? this.getLatestVital(patient.vitals, 'SPO2')?.value,
          risk_score: riskScore,
+         pain_level: patient.painLevel,
+         pain_reported_at: patient.painReportedAt,
       },
       risk_predictions: aiPredictions,
       trend_summary: [
@@ -64,5 +69,15 @@ export class PatientService {
 
   async findAll() {
       return this.prisma.patient.findMany({ include: { user: true }});
+  }
+
+  async reportPain(patientId: number, level: number) {
+      return this.prisma.patient.update({
+          where: { id: patientId },
+          data: { 
+              painLevel: level,
+              painReportedAt: new Date()
+          }
+      });
   }
 }

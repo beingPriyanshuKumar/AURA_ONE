@@ -38,6 +38,14 @@ model Patient {
   ward      String?
   riskScore Float?   @default(0)
   diagnosis String?
+  
+  // Pain Management
+  painLevel      Int?      // 0-10 Scale
+  painReportedAt DateTime?
+
+  // Latest Vitals Snapshot (Persisted from Stream)
+  latestVitals   Json?
+
   vitals    Vitals[]
   snapshots DigitalTwinSnapshot[]
   createdAt DateTime @default(now())

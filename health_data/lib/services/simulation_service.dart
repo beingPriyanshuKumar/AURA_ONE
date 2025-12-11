@@ -31,7 +31,7 @@ class SimulationService {
         'spo2_wave': spo2Wave,
         'hr': hr.round(),
         'spo2': 98 + (Random().nextDouble() * 2 - 1), // 97-99%
-        'bp': {'sys': sys.round(), 'dia': dia.round()},
+        'bp': '${sys.round()}/${dia.round()}',
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
     });

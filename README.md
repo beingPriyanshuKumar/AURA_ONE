@@ -41,11 +41,13 @@ The system consists of three connected applications:
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Project Structure
 
-- Node.js (v18+)
-- Flutter SDK (v3.16+)
-- Docker & Docker Compose (for DB)
+- `backend/`: NestJS application (API, AI Gateway, Digital Twin)
+- `mobile/`: Flutter application (Android/iOS)
+- `health_data/`: Flutter application (Hardware Simulator)
+- `web/`: Web application (React/Vite Frontend)
+- `docker-compose.yml`: Database infrastructure (PostgreSQL, Redis, TimescaleDB)
 
 ### 1. Database Infrastructure
 

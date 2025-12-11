@@ -9,8 +9,8 @@ class SocketService {
       _socket!.dispose();
     }
 
-    print('Connecting to http://$ip:3000');
-    _socket = io.io('http://$ip:3000', io.OptionBuilder()
+    print('Connecting to http://$ip:3001');
+    _socket = io.io('http://$ip:3001', io.OptionBuilder()
         .setTransports(['websocket'])
         .disableAutoConnect()
         .build());

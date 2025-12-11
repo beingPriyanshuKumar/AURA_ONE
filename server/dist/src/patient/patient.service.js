@@ -17,6 +17,7 @@ let PatientService = class PatientService {
         this.prisma = prisma;
     }
     async getDigitalTwin(id) {
+        var _a, _b, _c, _d, _e, _f;
         const patient = await this.prisma.patient.findUnique({
             where: { id },
             include: {
@@ -38,6 +39,7 @@ let PatientService = class PatientService {
             cardiac_event_24h: riskScore > 80 ? 0.4 : 0.05,
             deterioration_prob: riskScore / 100,
         };
+        const lv = patient.latestVitals;
         return {
             metadata: {
                 name: patient.user.name,
@@ -46,10 +48,12 @@ let PatientService = class PatientService {
                 ward: patient.ward,
             },
             current_state: {
-                heart_rate: this.getLatestVital(patient.vitals, 'HR'),
-                blood_pressure: this.getLatestVital(patient.vitals, 'BP'),
-                spo2: this.getLatestVital(patient.vitals, 'SPO2'),
+                heart_rate: (_a = lv === null || lv === void 0 ? void 0 : lv.hr) !== null && _a !== void 0 ? _a : (_b = this.getLatestVital(patient.vitals, 'HR')) === null || _b === void 0 ? void 0 : _b.value,
+                blood_pressure: (_c = lv === null || lv === void 0 ? void 0 : lv.bp) !== null && _c !== void 0 ? _c : (_d = this.getLatestVital(patient.vitals, 'BP')) === null || _d === void 0 ? void 0 : _d.value,
+                spo2: (_e = lv === null || lv === void 0 ? void 0 : lv.spo2) !== null && _e !== void 0 ? _e : (_f = this.getLatestVital(patient.vitals, 'SPO2')) === null || _f === void 0 ? void 0 : _f.value,
                 risk_score: riskScore,
+                pain_level: patient.painLevel,
+                pain_reported_at: patient.painReportedAt,
             },
             risk_predictions: aiPredictions,
             trend_summary: [
@@ -67,6 +71,15 @@ let PatientService = class PatientService {
     }
     async findAll() {
         return this.prisma.patient.findMany({ include: { user: true } });
+    }
+    async reportPain(patientId, level) {
+        return this.prisma.patient.update({
+            where: { id: patientId },
+            data: {
+                painLevel: level,
+                painReportedAt: new Date()
+            }
+        });
     }
 };
 exports.PatientService = PatientService;

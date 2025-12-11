@@ -23,4 +23,10 @@ export class PatientController {
   create(@Body() createPatientDto: any) {
       return this.patientService.createPatient(createPatientDto);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/pain')
+  reportPain(@Param('id', ParseIntPipe) id: number, @Body('level') level: number) {
+      return this.patientService.reportPain(id, level);
+  }
 }

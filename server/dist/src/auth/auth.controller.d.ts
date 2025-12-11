@@ -8,11 +8,11 @@ export declare class AuthController {
     }>;
     register(createUserDto: Prisma.UserCreateInput): Promise<{
         id: number;
-        name: string;
         createdAt: Date;
         updatedAt: Date;
         email: string;
         password: string;
+        name: string;
         role: import(".prisma/client").$Enums.Role;
     }>;
 }
