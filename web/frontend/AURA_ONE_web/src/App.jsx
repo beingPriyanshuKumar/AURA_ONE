@@ -1,10 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import Loader from './components/loader/Loader' 
 
 function App() {
   const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (loading) {
+    return  <Loader />
+  }
 
   return (
     <>
