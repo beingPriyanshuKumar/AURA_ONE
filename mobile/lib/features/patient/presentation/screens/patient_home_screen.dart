@@ -6,11 +6,15 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/aura_app_bar.dart';
 import '../../../../core/widgets/aura_fab.dart';
 import '../../../../core/widgets/aura_navigation_bar.dart';
+import '../../../../core/widgets/aura_assistant_button.dart';
 import '../../../../services/api_service.dart';
-import '../widgets/digital_twin_card.dart';
-import '../widgets/vitals_summary_card.dart';
-import '../widgets/vitals_graphs.dart';
-import '../../../../services/health_service.dart';
+import '../../../../features/navigation/presentation/screens/navigation_map_screen.dart';
+import '../screens/update_profile_screen.dart';
+import '../screens/medication_screen.dart';
+import '../screens/patient_history_screen.dart';
+import '../screens/profile_screen.dart';
+
+
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -21,178 +25,358 @@ class PatientHomeScreen extends StatefulWidget {
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
   int _currentIndex = 0;
+  String _mrn = "";
+  String _greeting = "My Health Hub";
 
   @override
   void initState() {
     super.initState();
-    // Request HealthKit access on load
-    HealthService().requestPermissions();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final name = await ApiService().getUserName();
+    final mrn = await ApiService().getPatientMRN();
+    if (mounted) {
+       setState(() {
+         if (name != null) _greeting = "Hi, $name";
+         if (mrn != null) _mrn = mrn;
+       });
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchPatientData() async {
+    final id = await ApiService().getPatientId();
+    if (id != null) {
+      return await ApiService().getPatientTwin(id);
+    }
+    return {};
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Allow body to extend behind standard navbar area
-      appBar: const AuraAppBar(
-        title: "My Digital Twin",
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(CupertinoIcons.bell_fill, color: AppColors.textPrimary),
+      extendBody: true,
+      // Only show top App Bar for Dashboard and Profile, hide for Map/Meds if they have their own
+      appBar: _currentIndex == 0 
+          ? AuraAppBar(
+              title: _greeting,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Icon(CupertinoIcons.bell_fill, color: AppColors.textPrimary),
+                ),
+              ],
+            ) 
+          : null,
+      body: Stack(
+        children: [
+          // CONTENT LAYER
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildDashboard(),     // 0: Home
+              const MedicationScreen(), // 1: Vitals/Meds (Reusing Meds screen for tab)
+              const NavigationMapScreen(), // 2: Map
+              const ProfileScreen(), // 3: Profile (New read-first screen)
+            ],
+          ),
+          
+          // BOTTOM NAVIGATION
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: AuraNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) {
+                setState(() => _currentIndex = index);
+              },
+            ),
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        // Hardcoded ID 1 for verified user for now
-        future: ApiService().getPatientTwin(1),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-             return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-             return Center(child: Text("Error: ${snapshot.error}", style: AppTypography.bodyMedium.copyWith(color: AppColors.error)));
-          }
-
-          final data = snapshot.data!;
-          // Default to sane values if null
-          final riskScore = (data['risk_score'] ?? 0).toDouble(); 
-          final heartRate = data['heart_rate']?.toString() ?? "--";
-          final bp = data['blood_pressure']?.toString() ?? "--/--";
-          final oxygen = data['oxygen_saturation']?.toString() ?? "--";
-
-          return Stack(
-            children: [
-              // Scrollable Content
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 100, 20, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DigitalTwinCard(riskScore: riskScore),
-                    const SizedBox(height: 24),
-                    
-                    // --- HEART RATE (HealthKit Linked) ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Heart Rate (HealthKit)", style: AppTypography.titleLarge),
-                        Text("$heartRate bpm", style: AppTypography.headlineLarge.copyWith(height: 1)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 160,
-                      child: HeartRateGraph(
-                        color: AppColors.success, // Green
-                        // Connect to HealthKit Stream!
-                        dataStream: HealthService().heartRateStream,
-                        isSimulation: false, // Use Real Data primarily (falls back internally if stream empty?)
-                        // Note: My HeartRateGraph falls back to simulation if no stream provided.
-                        // But here we provide one. If stream is silent, it might render nothing.
-                        // For demo purposes, we usually want hybrid: Stream updates | Simulation filler.
-                        // I'll update isSimulation to true for 'always animating' look + real data overrides.
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // --- BLOOD PRESSURE ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Blood Pressure", style: AppTypography.titleLarge),
-                        Text(bp, style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.accent)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const BloodPressureGraph(color: AppColors.accent), // Orange/Pink
-
-                    const SizedBox(height: 24),
-
-                    // --- OXYGEN SATURATION ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Oxygen (SpO2)", style: AppTypography.titleLarge),
-                        Text("$oxygen%", style: AppTypography.headlineLarge.copyWith(height: 1, color: AppColors.info)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const OxygenGraph(color: AppColors.info), // Blue
-
-                    const SizedBox(height: 32),
-                    
-                     GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 1.4,
-                      children: [
-                        _buildFeatureCard(
-                          context, 
-                          "Scan Meds", 
-                          CupertinoIcons.barcode_viewfinder, 
-                          AppColors.primary, 
-                          '/medication'
-                        ),
-                        // Keep simple summary cards as well? Maybe redundant now.
-                        // Let's replace them with useful actions or keep "Family" link
-                         _buildFeatureCard(
-                          context, 
-                          "Family Access", 
-                          CupertinoIcons.person_2_fill, 
-                          AppColors.info, 
-                          '/family/home' // Or relevant route
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Bottom Navigation
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: AuraNavigationBar(
-                  currentIndex: _currentIndex,
-                  onTap: (index) {
-                    setState(() => _currentIndex = index);
-                    if (index == 2) {
-                      context.push('/navigation');
-                    }
-                  },
-                ),
-              ),
-            ],
-          );
-        }
-      ),
-      floatingActionButton: AuraFAB(
-        onPressed: () => context.push('/chat'),
-        icon: CupertinoIcons.chat_bubble_text_fill,
-        label: "AI Assistant",
+      floatingActionButton: Container(
+        height: 75, 
+        width: 75,
+        margin: const EdgeInsets.only(top: 35), // Adjusted for new notch depth
+        child: AuraAssistantButton(
+          onPressed: () => context.push('/chat'),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _buildFeatureCard(BuildContext context, String label, IconData icon, Color color, String route) {
+  // --- DASHBOARD WIDGET ---
+  Widget _buildDashboard() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _fetchPatientData(), 
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+           return const Center(child: CircularProgressIndicator());
+        }
+        
+        final data = snapshot.data ?? {};
+        final status = data['status'] ?? "Unknown"; 
+        final room = data['metadata'] != null 
+            ? "Room ${data['metadata']['bed']} - ${data['metadata']['ward']}" 
+            : "Room --";
+        final medsTaken = 2; // Mock
+        final medsTotal = 4;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120), // Adjusted top padding since safe area handles it differently
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_mrn.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      "ID: $_mrn", 
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // --- 1. HOSPITAL STATUS CARD ---
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryDark], // Cleaner gradient
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                       BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10)),
+                    ]
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                        ),
+                        child: const Icon(CupertinoIcons.bed_double_fill, color: Colors.white, size: 30),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Current Status", 
+                              style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              status, 
+                              style: AppTypography.headlineLarge.copyWith(color: Colors.white, fontSize: 26),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(CupertinoIcons.location_solid, color: Colors.white70, size: 14),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    room, 
+                                    style: AppTypography.titleMedium.copyWith(color: Colors.white.withOpacity(0.9)),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // --- 2. MEDICATION PROGRESS ---
+                _buildSectionHeader("Medication Tracker", "See all", () => setState(() => _currentIndex = 1)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.surfaceHighlight),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Daily Progress", style: AppTypography.bodyMedium),
+                              const SizedBox(height: 4),
+                              Text("$medsTaken of $medsTotal", style: AppTypography.titleLarge.copyWith(color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                               SizedBox(
+                                 width: 50, height: 50,
+                                 child: CircularProgressIndicator(
+                                   value: medsTaken / medsTotal,
+                                   backgroundColor: AppColors.surfaceHighlight,
+                                   valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                                   strokeWidth: 5,
+                                 ),
+                               ),
+                               Text("${(medsTaken/medsTotal*100).toInt()}%", style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // --- 3. VITALS (Redesigned) ---
+                _buildSectionHeader("Latest Vitals", null, null),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildStaticVitalCard("Heart Rate", "${data['current_state']?['heart_rate'] ?? '--'}", "bpm", CupertinoIcons.heart_fill, AppColors.error)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildStaticVitalCard("Oxygen Level", "${(data['current_state']?['spo2'] as num?)?.toInt() ?? '--'}", "%", CupertinoIcons.drop_fill, AppColors.info)),
+                  ],
+                ),
+                
+                const SizedBox(height: 30),
+
+                // --- 4. QUICK ACTIONS ---
+                Text("Quick Actions", style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.4,
+                  children: [
+                    _buildActionCard("Report Pain", CupertinoIcons.exclamationmark_bubble_fill, AppColors.error, () => context.push('/patient/pain')),
+                    _buildActionCard("Find Way", CupertinoIcons.map_fill, AppColors.accent, () => setState(() => _currentIndex = 2)),
+                    _buildActionCard("My History", CupertinoIcons.time_solid, AppColors.primary, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientHistoryScreen()))),
+                    _buildActionCard("Family", CupertinoIcons.person_2_fill, AppColors.success, () => context.push('/family/home')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String? action, VoidCallback? onTap) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
+        if (action != null)
+          GestureDetector(
+            onTap: onTap,
+            child: Text(action, style: AppTypography.bodyMedium.copyWith(color: AppColors.primary)),
+          )
+      ],
+    );
+  }
+
+  Widget _buildStaticVitalCard(String title, String value, String unit, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.surfaceHighlight),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+        ]
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(value, style: AppTypography.headlineMedium.copyWith(fontSize: 28, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(unit, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(title, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () => context.push(route),
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.surfaceHighlight),
+           boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+           ]
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(label, style: AppTypography.titleMedium),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title, 
+              style: AppTypography.titleMedium.copyWith(fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

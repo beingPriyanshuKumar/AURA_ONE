@@ -17,6 +17,7 @@ let PatientService = class PatientService {
         this.prisma = prisma;
     }
     async getDigitalTwin(id) {
+        var _a, _b, _c, _d, _e, _f;
         const patient = await this.prisma.patient.findUnique({
             where: { id },
             include: {
@@ -38,6 +39,7 @@ let PatientService = class PatientService {
             cardiac_event_24h: riskScore > 80 ? 0.4 : 0.05,
             deterioration_prob: riskScore / 100,
         };
+        const lv = patient.latestVitals;
         return {
             metadata: {
                 name: patient.user.name,
@@ -45,11 +47,15 @@ let PatientService = class PatientService {
                 bed: patient.bed,
                 ward: patient.ward,
             },
+            status: patient.status || 'Discharged',
+            diagnosis: patient.diagnosis || '',
             current_state: {
-                heart_rate: this.getLatestVital(patient.vitals, 'HR'),
-                blood_pressure: this.getLatestVital(patient.vitals, 'BP'),
-                spo2: this.getLatestVital(patient.vitals, 'SPO2'),
+                heart_rate: (_a = lv === null || lv === void 0 ? void 0 : lv.hr) !== null && _a !== void 0 ? _a : (_b = this.getLatestVital(patient.vitals, 'HR')) === null || _b === void 0 ? void 0 : _b.value,
+                blood_pressure: (_c = lv === null || lv === void 0 ? void 0 : lv.bp) !== null && _c !== void 0 ? _c : (_d = this.getLatestVital(patient.vitals, 'BP')) === null || _d === void 0 ? void 0 : _d.value,
+                spo2: (_e = lv === null || lv === void 0 ? void 0 : lv.spo2) !== null && _e !== void 0 ? _e : (_f = this.getLatestVital(patient.vitals, 'SPO2')) === null || _f === void 0 ? void 0 : _f.value,
                 risk_score: riskScore,
+                pain_level: patient.painLevel,
+                pain_reported_at: patient.painReportedAt,
             },
             risk_predictions: aiPredictions,
             trend_summary: [
@@ -67,6 +73,123 @@ let PatientService = class PatientService {
     }
     async findAll() {
         return this.prisma.patient.findMany({ include: { user: true } });
+    }
+    async reportPain(patientId, level) {
+        return this.prisma.patient.update({
+            where: { id: patientId },
+            data: {
+                painLevel: level,
+                painReportedAt: new Date()
+            }
+        });
+    }
+    async updateProfileByUserId(userId, data) {
+        const existing = await this.prisma.patient.findFirst({ where: { userId } });
+        if (existing) {
+            return this.prisma.patient.update({
+                where: { id: existing.id },
+                data: {
+                    weight: data.weight,
+                    status: data.status,
+                    symptoms: data.symptoms,
+                    mrn: existing.mrn || `MRN-${Date.now()}`
+                }
+            });
+        }
+        else {
+            return this.prisma.patient.create({
+                data: {
+                    userId,
+                    mrn: `MRN-${Date.now().toString().substring(6)}`,
+                    dob: new Date('1990-01-01'),
+                    gender: 'Unknown',
+                    weight: data.weight || '70 kg',
+                    status: data.status || 'Admitted',
+                    symptoms: data.symptoms || 'None recorded',
+                    bed: 'Unassigned',
+                    ward: 'General',
+                }
+            });
+        }
+    }
+    async updateStatus(id, status) {
+        return this.prisma.patient.update({
+            where: { id },
+            data: { status }
+        });
+    }
+    async addMedication(patientId, data) {
+        const medication = await this.prisma.medication.create({
+            data: {
+                name: data.name,
+                description: data.description || 'Prescribed by doctor'
+            }
+        });
+        return this.prisma.prescription.create({
+            data: {
+                patientId,
+                medicationId: medication.id,
+                dosage: data.dosage || '1 pill daily',
+                frequency: data.frequency || 'Daily',
+                startDate: new Date(),
+                active: true
+            }
+        });
+    }
+    async addHistory(id, note) {
+        const patient = await this.prisma.patient.findUnique({ where: { id } });
+        const newEntry = `[${new Date().toISOString().split('T')[0]}] ${note}`;
+        const updatedHistory = patient.diagnosis ? `${patient.diagnosis}\n${newEntry}` : newEntry;
+        return this.prisma.patient.update({
+            where: { id },
+            data: { diagnosis: updatedHistory }
+        });
+    }
+    async getPatientMedications(patientId) {
+        const prescriptions = await this.prisma.prescription.findMany({
+            where: {
+                patientId,
+                active: true
+            },
+            include: {
+                medication: true
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        return prescriptions.map(p => ({
+            id: p.id,
+            name: p.medication.name,
+            dosage: p.dosage,
+            frequency: p.frequency,
+            startDate: p.startDate,
+            active: p.active
+        }));
+    }
+    async getPatientHistory(patientId) {
+        const patient = await this.prisma.patient.findUnique({
+            where: { id: patientId },
+            select: { diagnosis: true }
+        });
+        if (!(patient === null || patient === void 0 ? void 0 : patient.diagnosis)) {
+            return [];
+        }
+        const entries = patient.diagnosis.split('\n').filter(line => line.trim());
+        return entries.map(entry => {
+            const match = entry.match(/^\[(\d{4}-\d{2}-\d{2})\]\s*(.+)/);
+            if (match) {
+                const [, date, rest] = match;
+                const colonIndex = rest.indexOf(':');
+                if (colonIndex > 0) {
+                    return {
+                        date,
+                        type: rest.substring(0, colonIndex).trim(),
+                        note: rest.substring(colonIndex + 1).trim()
+                    };
+                }
+                return { date, type: 'Note', note: rest.trim() };
+            }
+            return { date: new Date().toISOString().split('T')[0], type: 'Note', note: entry };
+        });
     }
 };
 exports.PatientService = PatientService;

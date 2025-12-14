@@ -21,12 +21,18 @@ abstract class AnimatedVitalsGraph extends StatefulWidget {
 // ---------------------------------------------------------------------------
 // 1. HEART RATE GRAPH (ECG / QRS Style)
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 1. HEART RATE GRAPH (ECG / QRS Style)
+// ---------------------------------------------------------------------------
 class HeartRateGraph extends AnimatedVitalsGraph {
-  final Stream<double>? dataStream;
+  final Stream<double>? bpmStream;
+  final Stream<double>? waveStream; // Raw ECG Wave
+
   const HeartRateGraph({
     super.key, 
     required super.color, 
-    this.dataStream,
+    this.bpmStream,
+    this.waveStream,
     super.isSimulation = true,
   });
 
@@ -39,8 +45,8 @@ class _HeartRateGraphState extends State<HeartRateGraph> with SingleTickerProvid
   final List<double> _points = [];
   final int _maxPoints = 300;
   
-  double _bpm = 60.0; // Default / Starting BPM
-  double _lastPeakTime = 0.0;
+  double _bpm = 60.0;
+  bool _usingWaveStream = false;
 
   @override
   void initState() {
@@ -48,20 +54,31 @@ class _HeartRateGraphState extends State<HeartRateGraph> with SingleTickerProvid
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
     _controller.addListener(_updateGraph);
 
-    // Listen to real data if provided
-    widget.dataStream?.listen((val) {
-      if (mounted) {
-         setState(() => _bpm = val);
-      }
+    // Listen to BPM (HealthKit)
+    widget.bpmStream?.listen((val) {
+      if (mounted) setState(() => _bpm = val);
     });
 
-    // Pre-fill
+    // Listen to Raw Wave (Simulator)
+    if (widget.waveStream != null) {
+      _usingWaveStream = true;
+      widget.waveStream!.listen((val) {
+        if (mounted) {
+           setState(() {
+             _points.add(val);
+             if (_points.length > _maxPoints) _points.removeAt(0);
+           });
+        }
+      });
+    }
+
     for (int i = 0; i < _maxPoints; i++) _points.add(0);
   }
 
   void _updateGraph() {
-    // We update the graph every frame regardless of 'simulation' flag because
-    // HealthKit gives us BPM, not waveform points. We must synthesize the waveform.
+    // If using raw stream, we don't synthesize
+    if (_usingWaveStream) return;
+
     double t = DateTime.now().millisecondsSinceEpoch / 1000.0;
     double val = _synthesizeECG(t);
     
@@ -72,23 +89,15 @@ class _HeartRateGraphState extends State<HeartRateGraph> with SingleTickerProvid
   }
 
   double _synthesizeECG(double t) {
-    // 60 BPM = 1 beat / sec. 
-    // 120 BPM = 2 beats / sec. 
-    // duration = 60 / BPM
     double cycleDuration = 60.0 / _bpm; 
     if (cycleDuration <= 0) cycleDuration = 1.0;
-
     double p = (t % cycleDuration) / cycleDuration;
-    
-    // Smooth transition if BPM changes? 
-    // Ideally we track phase, but modulo time is decent for simple visual.
-    // QRS Complex Simulation
-    if (p > 0.10 && p < 0.15) return 0.2; // P wave
-    if (p > 0.15 && p < 0.20) return -0.2; // Q dip
-    if (p >= 0.20 && p < 0.30) return 1.5 * (1 - ((p-0.25).abs()*20)); // R spike (Linear approx)
-    if (p >= 0.30 && p < 0.35) return -0.4; // S dip
-    if (p > 0.40 && p < 0.50) return 0.3; // T wave
-    return (math.Random().nextDouble() * 0.05); // Noise
+    if (p > 0.10 && p < 0.15) return 0.2; 
+    if (p > 0.15 && p < 0.20) return -0.2; 
+    if (p >= 0.20 && p < 0.30) return 1.5 * (1 - ((p-0.25).abs()*20));
+    if (p >= 0.30 && p < 0.35) return -0.4;
+    if (p > 0.40 && p < 0.50) return 0.3;
+    return (math.Random().nextDouble() * 0.05);
   }
 
   @override
@@ -113,7 +122,8 @@ class _HeartRateGraphState extends State<HeartRateGraph> with SingleTickerProvid
 // 2. OXYGEN SATURATION GRAPH (Smooth Sine Wave)
 // ---------------------------------------------------------------------------
 class OxygenGraph extends AnimatedVitalsGraph {
-  const OxygenGraph({super.key, required super.color});
+  final Stream<double>? waveStream;
+  const OxygenGraph({super.key, required super.color, this.waveStream});
 
   @override
   State<OxygenGraph> createState() => _OxygenGraphState();
@@ -123,18 +133,33 @@ class _OxygenGraphState extends State<OxygenGraph> with SingleTickerProviderStat
   late AnimationController _controller;
   final List<double> _points = [];
   final int _maxPoints = 200;
+  bool _usingWaveStream = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
     _controller.addListener(_updateSimulation);
+
+    if (widget.waveStream != null) {
+      _usingWaveStream = true;
+      widget.waveStream!.listen((val) {
+        if (mounted) {
+          setState(() {
+            _points.add(val);
+             if (_points.length > _maxPoints) _points.removeAt(0);
+          });
+        }
+      });
+    }
+
     for (int i = 0; i < _maxPoints; i++) _points.add(0);
   }
 
   void _updateSimulation() {
-    double t = DateTime.now().millisecondsSinceEpoch / 500.0; // Slower
-    // Smooth Sine + dicrotic notch
+    if (_usingWaveStream) return;
+
+    double t = DateTime.now().millisecondsSinceEpoch / 500.0; 
     double val = math.sin(t) + 0.3 * math.sin(2 * t + 0.5);
     setState(() {
       _points.add(val);
@@ -159,6 +184,13 @@ class _OxygenGraphState extends State<OxygenGraph> with SingleTickerProviderStat
     );
   }
 }
+
+
+
+// ---------------------------------------------------------------------------
+// 2. OXYGEN SATURATION GRAPH (Smooth Sine Wave)
+// ---------------------------------------------------------------------------
+
 
 // ---------------------------------------------------------------------------
 // 3. BLOOD PRESSURE GRAPH (Dual Wave)
@@ -267,7 +299,7 @@ class _LineGraphPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.0
+      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
@@ -297,13 +329,42 @@ class _LineGraphPainter extends CustomPainter {
       }
     }
 
-    // Glow Effect
-    canvas.drawPath(path, Paint()..color = color.withOpacity(0.5)..strokeWidth = 4..style = PaintingStyle.stroke..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    // 1. Draw Gradient Fill
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        color.withOpacity(0.2),
+        color.withOpacity(0.0),
+      ],
+      stops: const [0.0, 0.85],
+    );
+
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..style = PaintingStyle.fill,
+    );
+
+    // 2. Draw Glow Effect (Removed as it caused blurring issues on some devices)
+    // canvas.drawPath(path, Paint()..color = color.withOpacity(0.5)..strokeWidth = 4..style = PaintingStyle.stroke..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    
+    // 3. Draw Main Line
     canvas.drawPath(path, paint);
 
-    // Tip
+    // 4. Draw Tip
     if (points.isNotEmpty) {
        double lastY = midY - (points.last * (size.height / range));
+       
+       // Outer glow ring
+       canvas.drawCircle(Offset(size.width, lastY), 6, Paint()..color = color.withOpacity(0.3));
+       // Inner dot
        canvas.drawCircle(Offset(size.width, lastY), 3, Paint()..color = Colors.white);
     }
   }

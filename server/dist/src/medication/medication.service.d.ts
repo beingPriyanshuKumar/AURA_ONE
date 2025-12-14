@@ -3,16 +3,16 @@ export declare class MedicationService {
     private prisma;
     constructor(prisma: PrismaService);
     getAllMedications(): Promise<{
-        id: number;
         name: string;
+        id: number;
         createdAt: Date;
         description: string | null;
         sideEffects: string | null;
         interactions: string | null;
     }[]>;
     createMedication(data: any): Promise<{
-        id: number;
         name: string;
+        id: number;
         createdAt: Date;
         description: string | null;
         sideEffects: string | null;
@@ -20,8 +20,8 @@ export declare class MedicationService {
     }>;
     getPatientPrescriptions(patientId: number): Promise<({
         medication: {
-            id: number;
             name: string;
+            id: number;
             createdAt: Date;
             description: string | null;
             sideEffects: string | null;
@@ -29,8 +29,8 @@ export declare class MedicationService {
         };
     } & {
         id: number;
-        patientId: number;
         createdAt: Date;
+        patientId: number;
         medicationId: number;
         dosage: string;
         frequency: string;
@@ -41,8 +41,8 @@ export declare class MedicationService {
     prescribe(patientId: number, medicationId: number, dosage: string, frequency: string): Promise<{
         prescription: {
             id: number;
-            patientId: number;
             createdAt: Date;
+            patientId: number;
             medicationId: number;
             dosage: string;
             frequency: string;

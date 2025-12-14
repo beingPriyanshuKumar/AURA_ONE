@@ -1,18 +1,17 @@
 import { AuthService } from './auth.service';
-import { Prisma } from '@prisma/client';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
     login(signInDto: Record<string, any>): Promise<{
         access_token: string;
+        user: {
+            id: any;
+            name: any;
+            email: any;
+            role: any;
+        };
+        patient: any;
+        isProfileComplete: boolean;
     }>;
-    register(createUserDto: Prisma.UserCreateInput): Promise<{
-        id: number;
-        name: string;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        password: string;
-        role: import(".prisma/client").$Enums.Role;
-    }>;
+    register(createUserDto: any): Promise<any>;
 }
