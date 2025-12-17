@@ -7,14 +7,17 @@ import 'core/widgets/emergency_overlay.dart';
 
 
 import 'package:flutter/foundation.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  final socketUrl = (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) 
-      ? 'http://10.0.2.2:3001' 
-      : 'http://localhost:3001';
-      
+  // Initialize NotificationService
+  await NotificationService().initialize();
+  await NotificationService().requestPermissions();
+  
+  final socketUrl = 'http://172.20.10.3:3001';
+       
   SocketService().init(socketUrl);
 
   runApp(const ProviderScope(child: AuraOneApp()));

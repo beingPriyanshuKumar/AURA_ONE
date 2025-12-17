@@ -13,6 +13,12 @@ export class PatientController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get(':id/recovery-graph')
+  getRecoveryGraph(@Param('id', ParseIntPipe) id: number) {
+    return this.patientService.generateRecoveryGraph(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll() {
       return this.patientService.findAll();
@@ -63,5 +69,25 @@ export class PatientController {
   @Get(':id/history')
   getPatientHistory(@Param('id', ParseIntPipe) id: number) {
     return this.patientService.getPatientHistory(id);
+  }
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/reports')
+  getPatientReports(@Param('id', ParseIntPipe) id: number) {
+    return this.patientService.getPatientReports(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/reports')
+  async uploadReport(@Param('id', ParseIntPipe) id: number, @Body() body: { fileName: string; fileType: string }) {
+    return this.patientService.uploadReport(id, body.fileName, body.fileType);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/vitals/manual')
+  async addManualVital(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { type: string; value: number; unit: string },
+  ) {
+    return this.patientService.addManualVital(id, body.type, body.value, body.unit);
   }
 }

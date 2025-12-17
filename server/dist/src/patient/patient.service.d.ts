@@ -2,12 +2,18 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class PatientService {
     private prisma;
     constructor(prisma: PrismaService);
+    generateRecoveryGraph(id: number): Promise<{
+        summary: any;
+        recovery_graph_url: any;
+    }>;
     getDigitalTwin(id: number): Promise<{
         metadata: {
             name: string;
             mrn: string;
             bed: string;
             ward: string;
+            weight: string;
+            symptoms: string;
         };
         status: string;
         diagnosis: string;
@@ -51,9 +57,9 @@ export declare class PatientService {
             id: number;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
             email: string;
             password: string;
-            name: string;
             blockchainId: string | null;
             role: import(".prisma/client").$Enums.Role;
         };
@@ -176,4 +182,24 @@ export declare class PatientService {
         type: string;
         note: string;
     }[]>;
+    getPatientReports(patientId: number): Promise<{
+        id: number;
+        name: string;
+        type: string;
+        date: string;
+        size: string;
+        url: string;
+    }[]>;
+    uploadReport(patientId: number, fileName: string, fileType: string): Promise<{
+        message: string;
+        fileId: number;
+    }>;
+    addManualVital(patientId: number, type: string, value: number, unit: string): Promise<{
+        id: number;
+        timestamp: Date;
+        patientId: number;
+        type: string;
+        value: number;
+        unit: string;
+    }>;
 }
